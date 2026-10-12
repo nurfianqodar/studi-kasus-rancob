@@ -1,0 +1,607 @@
+#' ---
+#' title: Studi Kasus Penggunaa R untuk Analisis Rancangan Percobaan Pertanian
+#' author: Nurfian Qodar
+#' ---
+#'
+#' # Memuat *library*
+#'
+#' Memuat *library* dapat menggunakan fungsi bawaan R yaitu `library` atau
+#' gunakan pacman `pacman::p_load` (lebih cepat). Gunakan salah satu kode
+#' dibawah ini:
+#'
+#' - Dengan `pacman` (lebih cepat)
+#'
+## -----------------------------------------------------------------------------
+if (!("pacman" %in% installed.packages())) {
+  install.packages("pacman")
+}
+
+pacman::p_load(tidyverse, agricolae, openxlsx, emmeans, nlme)
+
+#'
+#' - Dengan `library` R
+#'
+## -----------------------------------------------------------------------------
+library(tidyverse, agricolae, openxlsx)
+
+#'
+#' # 1. Rancangan acak lengkap (RAL)
+#'
+#' ## 1.1. Pratinjau data
+#'
+#' ### a. Muat data
+#'
+## -----------------------------------------------------------------------------
+df <- read.xlsx("data.xlsx", sheet = "ral_jagung")
+
+#'
+#' ### b. Ringkasan data
+#'
+#' - Memeriksa tipe data
+#'
+## -----------------------------------------------------------------------------
+df |> str()
+
+#'
+#' - Ringkasan data
+#'
+## -----------------------------------------------------------------------------
+df |> summary()
+
+#'
+#' - Memeriksa data kosong
+#'
+## -----------------------------------------------------------------------------
+df |> is.na() |> colSums()
+
+#'
+#' ### c. Membersihkan data
+#'
+#'
+## -----------------------------------------------------------------------------
+df <- df |>
+  rename(
+    faktor1 = f1,
+    faktor2 = f2,
+    ulangan = rep
+  ) |>
+  mutate(
+    faktor1 = as.factor(faktor1),
+    faktor2 = as.factor(faktor2),
+    ulangan = as.factor(ulangan)
+  )
+
+#'
+#'
+#' Tijauan ulang data setelah dirapikan:
+#'
+## -----------------------------------------------------------------------------
+df |> str()
+
+#'
+## -----------------------------------------------------------------------------
+df |> summary()
+
+#'
+#' ## 1.2. Analisis data
+#'
+#' ### a. Analisis sidik ragam (ANOVA)
+#'
+## -----------------------------------------------------------------------------
+model <- aov(tinggi_tanaman ~ faktor1 * faktor2, data = df)
+
+#'
+#' Lihat hasil analisis:
+#'
+## -----------------------------------------------------------------------------
+model |> summary()
+
+#'
+#' ### b. Uji lanjut
+#'
+#' Karena terdapat interaksi maka uji lanjutan akan dilakukan pada seluruh `faktor1`
+#' terhadap setiap `faktor2` dan seluruh `faktor2` terhadap setiap `faktor1`.
+#'
+#' #### DMRT
+#'
+#' ##### Uji `faktor1` pada setiap `faktor2`
+#'
+## -----------------------------------------------------------------------------
+faktor2 <- df$faktor2 |>
+  unique()
+
+faktor2
+
+#'
+## -----------------------------------------------------------------------------
+for (f in faktor2) {
+  dd <- df |>
+    filter(faktor2 == f)
+  model <- aov(tinggi_tanaman ~ faktor1, data = dd)
+  dmrt <- duncan.test(model, trt = "faktor1")
+  tabel <- dmrt$groups |>
+    as.data.frame() |>
+    rownames_to_column("Faktor 1")
+
+  paste0("Faktor 1 pada ", f, "\n") |> cat(sep = "")
+
+  print(tabel)
+
+  cat("\n\n")
+}
+
+#'
+#' ##### Uji `faktor2` pada setiap `faktor1`
+#'
+## -----------------------------------------------------------------------------
+faktor1 <- df$faktor1 |>
+  unique()
+
+faktor1
+
+#'
+## -----------------------------------------------------------------------------
+for (f in faktor1) {
+  dd <- df |>
+    filter(faktor1 == f)
+
+  model <- aov(tinggi_tanaman ~ faktor2, data = dd)
+
+  dmrt <- duncan.test(model, trt = "faktor2")
+
+  tabel <- dmrt$groups |>
+    as.data.frame() |>
+    rownames_to_column("Faktor 2")
+
+  paste0("Faktor 2 pada ", f, "\n") |> cat(sep = "")
+
+  print(tabel)
+
+  cat("\n\n")
+}
+
+#'
+#' #### Tukey HSD
+#'
+#' ##### Uji `faktor1` pada setiap `faktor2`
+#'
+## -----------------------------------------------------------------------------
+for (f in faktor2) {
+  dd <- df |>
+    filter(faktor2 == f)
+  model <- aov(tinggi_tanaman ~ faktor1, data = dd)
+  hsd <- TukeyHSD(model, "faktor1")
+  tabel <- hsd$faktor1 |>
+    as.data.frame() |>
+    rownames_to_column("Faktor 1") |>
+    mutate(
+      signif = `p adj` < 0.05
+    )
+
+  paste0("Faktor 1 pada ", f, "\n") |> cat(sep = "")
+
+  print(tabel)
+
+  cat("\n\n")
+}
+
+#'
+#' ##### Uji `faktor2` pada setiap `faktor1`
+#'
+## -----------------------------------------------------------------------------
+for (f in faktor1) {
+  dd <- df |>
+    filter(faktor1 == f)
+
+  model <- aov(tinggi_tanaman ~ faktor2, data = dd)
+
+  hsd <- TukeyHSD(model, "faktor2")
+
+  tabel <- hsd$faktor2 |>
+    as.data.frame() |>
+    rownames_to_column("Faktor 2")
+
+  paste0("Faktor 2 pada ", f, "\n") |> cat(sep = "")
+
+  print(tabel)
+
+  cat("\n\n")
+}
+
+#'
+#' # 2. Rancangan Acak Kelompok (RAK)
+#'
+#' ## 2.1. Pratinjau data
+#'
+#' ### a. Muat data
+#'
+## -----------------------------------------------------------------------------
+df <- read.xlsx("data.xlsx", sheet = "rak_jagung")
+
+#'
+#' ### b. Ringkasan data
+#'
+#' - Memeriksa tipe data
+#'
+## -----------------------------------------------------------------------------
+df |> str()
+
+#'
+#' - Ringkasan data
+#'
+## -----------------------------------------------------------------------------
+df |> summary()
+
+#'
+#' - Memeriksa data kosong
+#'
+## -----------------------------------------------------------------------------
+df |> is.na() |> colSums()
+
+#'
+#' ### c. Membersihkan data
+#'
+## -----------------------------------------------------------------------------
+df <- df |>
+  rename(
+    faktor1 = f1,
+    faktor2 = f2,
+    ulangan = rep
+  ) |>
+  mutate(
+    faktor1 = as.factor(faktor1),
+    faktor2 = as.factor(faktor2),
+    ulangan = as.factor(ulangan)
+  )
+
+#'
+#'
+#' Tijauan ulang data setelah dirapikan:
+#'
+## -----------------------------------------------------------------------------
+df |> str()
+
+#'
+## -----------------------------------------------------------------------------
+df |> summary()
+
+#'
+#' ## 2.2. Analisis data
+#'
+#' ### a. Analisis sidik ragam (ANOVA)
+#'
+## -----------------------------------------------------------------------------
+model <- aov(tinggi_tanaman ~ faktor1 * faktor2 + ulangan, data = df)
+
+#'
+#' Lihat hasil analisis:
+#'
+## -----------------------------------------------------------------------------
+model |> summary()
+
+#'
+#' ### b. Uji lanjut
+#'
+#' Karena terdapat interaksi maka uji lanjutan akan dilakukan pada seluruh `faktor1`
+#' terhadap setiap `faktor2` dan seluruh `faktor2` terhadap setiap `faktor1`.
+#'
+#' #### DMRT
+#'
+#' ##### Uji `faktor1` pada setiap `faktor2`
+#'
+## -----------------------------------------------------------------------------
+faktor2 <- df$faktor2 |>
+  unique()
+
+faktor2
+
+#'
+## -----------------------------------------------------------------------------
+for (f in faktor2) {
+  dd <- df |>
+    filter(faktor2 == f)
+  model <- aov(tinggi_tanaman ~ faktor1 + ulangan, data = dd)
+  dmrt <- duncan.test(model, trt = "faktor1")
+  tabel <- dmrt$groups |>
+    as.data.frame() |>
+    rownames_to_column("Faktor 1")
+
+  paste0("Faktor 1 pada ", f, "\n") |> cat(sep = "")
+
+  print(tabel)
+
+  cat("\n\n")
+}
+
+#'
+#' ##### Uji `faktor2` pada setiap `faktor1`
+#'
+## -----------------------------------------------------------------------------
+faktor1 <- df$faktor1 |>
+  unique()
+
+faktor1
+
+#'
+## -----------------------------------------------------------------------------
+for (f in faktor1) {
+  dd <- df |>
+    filter(faktor1 == f)
+
+  model <- aov(tinggi_tanaman ~ faktor2 + ulangan, data = dd)
+
+  dmrt <- duncan.test(model, trt = "faktor2")
+
+  tabel <- dmrt$groups |>
+    as.data.frame() |>
+    rownames_to_column("Faktor 2")
+
+  paste0("Faktor 2 pada ", f, "\n") |> cat(sep = "")
+
+  print(tabel)
+
+  cat("\n\n")
+}
+
+#'
+#' #### Tukey HSD
+#'
+#' ##### Uji `faktor1` pada setiap `faktor2`
+#'
+## -----------------------------------------------------------------------------
+for (f in faktor2) {
+  dd <- df |>
+    filter(faktor2 == f)
+  model <- aov(tinggi_tanaman ~ faktor1 + ulangan, data = dd)
+  hsd <- TukeyHSD(model, "faktor1")
+  tabel <- hsd$faktor1 |>
+    as.data.frame() |>
+    rownames_to_column("Faktor 1") |>
+    mutate(
+      signif = `p adj` < 0.05
+    )
+
+  paste0("Faktor 1 pada ", f, "\n") |> cat(sep = "")
+
+  print(tabel)
+
+  cat("\n\n")
+}
+
+#'
+#' ##### Uji `faktor2` pada setiap `faktor1`
+#'
+## -----------------------------------------------------------------------------
+for (f in faktor1) {
+  dd <- df |>
+    filter(faktor1 == f)
+
+  model <- aov(tinggi_tanaman ~ faktor2 + ulangan, data = dd)
+
+  hsd <- TukeyHSD(model, "faktor2")
+
+  tabel <- hsd$faktor2 |>
+    as.data.frame() |>
+    rownames_to_column("Faktor 2")
+
+  paste0("Faktor 2 pada ", f, "\n") |> cat(sep = "")
+
+  print(tabel)
+
+  cat("\n\n")
+}
+
+#'
+#'
+#' # 3. Rancangan Bujur Sangkar Latin (RBSL)
+#'
+#' ## 3.1. Pratinjau data
+#'
+#' ### a. Muat data
+#'
+## -----------------------------------------------------------------------------
+df <- read.xlsx("data.xlsx", sheet = "rbsl_jagung")
+
+#'
+#' ### b. Ringkasan data
+#'
+#' - Memeriksa tipe data
+#'
+## -----------------------------------------------------------------------------
+df |> str()
+
+#'
+#' - Ringkasan data
+#'
+## -----------------------------------------------------------------------------
+df |> summary()
+
+#'
+#' - Memeriksa data kosong
+#'
+## -----------------------------------------------------------------------------
+df |> is.na() |> colSums()
+
+#'
+#'
+#' ### c. Membersihkan data
+#'
+## -----------------------------------------------------------------------------
+df <- df |>
+  rename(
+    faktor1 = f1,
+    faktor2 = f2
+  ) |>
+  mutate(
+    faktor1 = as.factor(faktor1),
+    faktor2 = as.factor(faktor2),
+    kolom = as.factor(kolom),
+    baris = as.factor(baris)
+  ) |>
+  select(-trt)
+
+#'
+#' Tinjauan ulang data setelah dirapikan:
+#'
+## -----------------------------------------------------------------------------
+df |> str()
+
+#'
+#'
+## -----------------------------------------------------------------------------
+df |> summary()
+
+#'
+#' ## 3.2. Analisis data
+#'
+#' ### a. Analisis sidik ragam (ANOVA)
+#'
+## -----------------------------------------------------------------------------
+model <- lm(data ~ kolom + baris + faktor1 * faktor2, data = df)
+
+#'
+## -----------------------------------------------------------------------------
+model |> anova()
+
+#'
+#' ### b. Uji lanjut
+#'
+#' #### Tukey HSD
+#'
+## -----------------------------------------------------------------------------
+hsd_f1 <- emmeans(model, ~ faktor1 | faktor2)
+
+pairs(hsd_f1, adjust = "tukey")
+
+#'
+## -----------------------------------------------------------------------------
+hsd_f2 <- emmeans(model, ~ faktor2 | faktor1)
+
+pairs(hsd_f2, adjust = "tukey")
+
+#'
+#'
+#'
+#' # 4. Rancangan Petak Terbagi (*Split Plot*)
+#'
+#' ## 4.1. Pratinjau data
+#'
+#' ### a. Muat data
+#'
+## -----------------------------------------------------------------------------
+df <- read.xlsx("data.xlsx", sheet = "sp_jagung")
+
+#'
+#' ### b. Ringkasan data
+#'
+#' - Memeriksa tipe data
+#'
+## -----------------------------------------------------------------------------
+df |> str()
+
+#'
+#' - Ringkasan data
+#'
+## -----------------------------------------------------------------------------
+df |> summary()
+
+#'
+#' - Memeriksa data kosong
+#'
+## -----------------------------------------------------------------------------
+df |> is.na() |> colSums()
+
+#'
+#' ### c. Membersihkan data
+#'
+## -----------------------------------------------------------------------------
+df <- df |>
+  rename(
+    faktor1 = f1,
+    faktor2 = f2,
+    ulangan = rep
+  ) |>
+  mutate(
+    faktor1 = as.factor(faktor1),
+    faktor2 = as.factor(faktor2),
+    ulangan = as.factor(ulangan)
+  )
+
+#'
+#'
+#' Tijauan ulang data setelah dirapikan:
+#'
+## -----------------------------------------------------------------------------
+df |> str()
+
+#'
+## -----------------------------------------------------------------------------
+df |> summary()
+
+#'
+#' ## 4.2. Analisis data
+#'
+#' ### a. Analisis sidik ragam (ANOVA)
+#'
+## -----------------------------------------------------------------------------
+model <- aov(
+  tinggi_tanaman ~ faktor1 * faktor2 + Error(ulangan / faktor1),
+  data = df
+)
+
+#'
+## -----------------------------------------------------------------------------
+model |> summary()
+
+#'
+#' ### b. Uji lanjut
+#'
+#' Karena terdapat interaksi maka uji lanjutan akan dilakukan pada seluruh `faktor1`
+#' terhadap setiap `faktor2` dan seluruh `faktor2` terhadap setiap `faktor1`.
+#'
+#' #### Tukey HSD
+#'
+## -----------------------------------------------------------------------------
+model <- lme(
+  tinggi_tanaman ~ faktor1 * faktor2,
+  random = ~ 1 | ulangan / faktor1,
+  data = df
+)
+
+#'
+## -----------------------------------------------------------------------------
+hsd_f1 <- emmeans(
+  model,
+  ~ faktor1 | faktor2
+)
+
+pairs(
+  hsd_f1,
+  adjust = "tukey"
+)
+
+#'
+#'
+## -----------------------------------------------------------------------------
+hsd_f1 <- emmeans(
+  model,
+  ~ faktor1 | faktor2
+)
+
+pairs(
+  hsd_f1,
+  adjust = "tukey"
+)
+
+#'
+#'
+## -----------------------------------------------------------------------------
+hsd_f2 <- emmeans(
+  model,
+  ~ faktor2 | faktor1
+)
+
+pairs(
+  hsd_f2,
+  adjust = "tukey"
+)
