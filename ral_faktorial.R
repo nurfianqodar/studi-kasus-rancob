@@ -11,13 +11,15 @@ if (!("pacman" %in% installed.packages())) {
   install.packages("pacman")
 }
 
-pacman::p_load(tidyverse, agricolae, openxlsx, emmeans, nlme)
+pacman::p_load(tidyverse, agricolae, openxlsx)
 
 #'
 #' - Dengan `library` R
 #'
 ## -----------------------------------------------------------------------------
-library(tidyverse, agricolae, openxlsx)
+library(tidyverse)
+library(agricolae)
+library(openxlsx)
 
 #'
 #' # 1. Rancangan acak lengkap (RAL)
