@@ -11,13 +11,14 @@ if (!("pacman" %in% installed.packages())) {
   install.packages("pacman")
 }
 
-pacman::p_load(tidyverse, agricolae, openxlsx)
+pacman::p_load(dplyr, tibble, agricolae, openxlsx)
 
 #'
 #' - Dengan `library` R
 #'
 ## -----------------------------------------------------------------------------
-library(tidyverse)
+library(dplyr)
+library(tibble)
 library(agricolae)
 library(openxlsx)
 
