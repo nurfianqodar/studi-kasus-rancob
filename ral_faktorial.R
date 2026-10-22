@@ -1,64 +1,18 @@
-#' # Memuat *library*
-#'
-#' Memuat *library* dapat menggunakan fungsi bawaan R yaitu `library` atau
-#' gunakan pacman `pacman::p_load` (lebih cepat). Gunakan salah satu kode
-#' dibawah ini:
-#'
-#' - Dengan `pacman` (lebih cepat)
-#'
-## -----------------------------------------------------------------------------
 if (!("pacman" %in% installed.packages())) {
   install.packages("pacman")
 }
 
 pacman::p_load(dplyr, tibble, agricolae, openxlsx)
 
-#'
-#' - Dengan `library` R
-#'
-## -----------------------------------------------------------------------------
-library(dplyr)
-library(tibble)
-library(agricolae)
-library(openxlsx)
-
-#'
-#' # 1. Rancangan acak lengkap (RAL)
-#'
-#' ## 1.1. Pratinjau data
-#'
-#' ### a. Muat data
-#'
-## -----------------------------------------------------------------------------
+# Membaca file excel
 df <- read.xlsx("data.xlsx", sheet = "ral_jagung")
 
-#'
-#' ### b. Ringkasan data
-#'
-#' - Memeriksa tipe data
-#'
-## -----------------------------------------------------------------------------
+# Ringkasan data
 df |> str()
 
-#'
-#' - Ringkasan data
-#'
-## -----------------------------------------------------------------------------
 df |> summary()
 
-#'
-#' - Memeriksa data kosong
-#'
-## -----------------------------------------------------------------------------
-df |>
-  is.na() |>
-  colSums()
-
-#'
-#' ### c. Membersihkan data
-#'
-#'
-## -----------------------------------------------------------------------------
+# Merapikan data agar sesuai untuk analisis
 df <- df |>
   rename(
     faktor1 = f1,
@@ -71,49 +25,24 @@ df <- df |>
     ulangan = as.factor(ulangan)
   )
 
-#'
-#'
-#' Tijauan ulang data setelah dirapikan:
-#'
-## -----------------------------------------------------------------------------
+# Meninjau ulang data
 df |> str()
 
-#'
-## -----------------------------------------------------------------------------
 df |> summary()
 
-#'
-#' ## 1.2. Analisis data
-#'
-#' ### a. Analisis sidik ragam (ANOVA)
-#'
-## -----------------------------------------------------------------------------
+# ANOVA
 model <- aov(tinggi_tanaman ~ faktor1 * faktor2, data = df)
 
-#'
-#' Lihat hasil analisis:
-#'
-## -----------------------------------------------------------------------------
 model |> summary()
 
-#'
-#' ### b. Uji lanjut
-#'
-#' Karena terdapat interaksi maka uji lanjutan akan dilakukan pada seluruh `faktor1`
-#' terhadap setiap `faktor2` dan seluruh `faktor2` terhadap setiap `faktor1`.
-#'
-#' #### DMRT
-#'
-#' ##### Uji `faktor1` pada setiap `faktor2`
-#'
-## -----------------------------------------------------------------------------
+
+# Uji lanjut semua faktor 1 pada setiap faktor 2
+
 faktor2 <- df$faktor2 |>
   unique()
 
 faktor2
 
-#'
-## -----------------------------------------------------------------------------
 for (f in faktor2) {
   dd <- df |>
     filter(faktor2 == f)
@@ -130,17 +59,14 @@ for (f in faktor2) {
   cat("\n\n")
 }
 
-#'
-#' ##### Uji `faktor2` pada setiap `faktor1`
-#'
-## -----------------------------------------------------------------------------
+
+# Uji lanjut semua faktor 2 pada setiap faktor 1
+
 faktor1 <- df$faktor1 |>
   unique()
 
 faktor1
 
-#'
-## -----------------------------------------------------------------------------
 for (f in faktor1) {
   dd <- df |>
     filter(faktor1 == f)
