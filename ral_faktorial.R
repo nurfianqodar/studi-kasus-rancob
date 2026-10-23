@@ -31,13 +31,19 @@ df |> str()
 df |> summary()
 
 # ANOVA
-model <- aov(tinggi_tanaman ~ faktor1 * faktor2, data = df)
+model <- aov(tinggi_tanaman ~ faktor1 * faktor2 + ulangan, data = df)
 
 model |> summary()
 
 
-# Uji lanjut semua faktor 1 pada setiap faktor 2
 
+
+
+# ==========================================================================
+# Uji Lanjut Jika ada Interaksi
+# ==========================================================================
+
+# Uji lanjut semua faktor 1 pada setiap faktor 2
 faktor2 <- df$faktor2 |>
   unique()
 
@@ -61,7 +67,6 @@ for (f in faktor2) {
 
 
 # Uji lanjut semua faktor 2 pada setiap faktor 1
-
 faktor1 <- df$faktor1 |>
   unique()
 
@@ -85,3 +90,21 @@ for (f in faktor1) {
 
   cat("\n\n")
 }
+
+# ==========================================================================
+# Akhir uji Lanjut Jika ada Interaksi
+# ==========================================================================
+
+
+# ==========================================================================
+# Uji Lanjut Jika Faktor 1 dan/atau Faktor 2 Signifikan
+# ==========================================================================
+
+model <- aov(tinggi_tanaman ~ faktor1 * faktor2 + ulangan, data = df)
+
+
+dmrtf1 <- duncan.test(model, trt = "faktor1")
+
+dmrtf2 <- duncan.test(model, trt = "faktor2")
+
+
